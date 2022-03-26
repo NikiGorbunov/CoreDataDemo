@@ -13,7 +13,7 @@ protocol TaskViewControllerDelegate {
 }
 
 class TaskListViewController: UITableViewController {
-    
+
     private let cellID = "task"
     private var taskList: [Task] = []
 
@@ -75,10 +75,11 @@ class TaskListViewController: UITableViewController {
         StorageManager.shared.saveCoreData(taskName) { task in
             self.taskList.append(task)
             self.tableView.insertRows(
-                at: [IndexPath(row: self.taskList.count, section: 0)],
+                at: [IndexPath(row: self.taskList.count - 1, section: 0)],
                 with: .automatic
             )
         }
+        reloadData()
     }
     
     private func fetchData() {
@@ -111,8 +112,47 @@ extension TaskListViewController {
 }
 
 // MARK: - TaskViewControllerDelegate
+extension TaskListViewController {
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        let task = taskList[indexPath.row]
+        
+        if editingStyle == .delete {
+            taskList.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+            StorageManager.shared.deleteCoreData(task)
+        }
+    }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let task = taskList[indexPath.row]
+        showAlertForEditing(title: "Please edit your task", message: "Save to confirm changes!", task: task)
+    }
+    private func showAlertForEditing(title: String, message: String, task: Task) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let saveAction = UIAlertAction(title: "Save", style: .default) { _ in
+            guard let editedTF = alert.textFields?.first?.text else {return}
+            
+            StorageManager.shared.editCoreData(task, newName: editedTF)
+            self.reloadData()
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
+        alert.addAction(saveAction)
+        alert.addAction(cancelAction)
+        alert.addTextField { currentText in
+            currentText.text = task.title
+        }
+        present(alert, animated: true)
+    }
+}
+
+
+// MARK: - TaskViewControllerDelegate
 extension TaskListViewController: TaskViewControllerDelegate {
     func reloadData() {
+        fetchData()
         tableView.reloadData()
     }
 }
+
+    

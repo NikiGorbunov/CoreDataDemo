@@ -20,10 +20,11 @@ class StorageManager {
     
     static let shared = StorageManager()
     
-    let viewContext: NSManagedObjectContext
+    private var viewContext: NSManagedObjectContext {
+        persistentContainer.viewContext
+    }
     
     private init() {
-        viewContext = persistentContainer.viewContext
     }
     
     // MARK: - Core Data stack
@@ -39,7 +40,8 @@ class StorageManager {
 
     // MARK: - Save Core Data
     func saveCoreData(_ name: String, completion: (Task) -> Void) {
-        let task = Task(context: viewContext)
+        guard let entityDescription = NSEntityDescription.entity(forEntityName: "Task", in: viewContext) else { return }
+        guard let task = NSManagedObject(entity: entityDescription, insertInto: viewContext) as? Task else { return }
         task.title = name
         saveContext()
     }
